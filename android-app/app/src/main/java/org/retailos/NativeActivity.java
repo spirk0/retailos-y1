@@ -239,8 +239,13 @@ public class NativeActivity extends Activity implements SurfaceHolder.Callback {
      * thread applies only the newest level. */
     private volatile int backlightLevel = -1;               /* -1: no event yet, the Y1's brightness */
     private volatile boolean backlightPosted;
+    /* when the runner (re)starts, the guest time jumps to host time; the
+       firmware then expires its backlight timer at once. Ignore "off" for
+       a few seconds after a (re)start, as a waking iPod turns the light on. */
+    private volatile long fifoOpenedAt;
 
     private void backlight(int level) {
+        if (level == 0 && SystemClock.uptimeMillis() - fifoOpenedAt < 3000) return;
         boolean dark = level == 0, wasDark = backlightLevel == 0;
         backlightLevel = level;
         if (dark != wasDark) {
@@ -279,6 +284,7 @@ public class NativeActivity extends Activity implements SurfaceHolder.Callback {
             DataInputStream in = null;
             try {
                 in = new DataInputStream(new BufferedInputStream(new FileInputStream(path), 1 << 16));
+                fifoOpenedAt = SystemClock.uptimeMillis();
                 for (;;) {
                     in.readFully(hdr);
                     if (le32(hdr, 0) == EVENT_MAGIC) {

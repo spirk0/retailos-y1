@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.WindowManager;
@@ -33,6 +35,7 @@ public class StartActivity extends Activity {
     private WheelMenu menu;
     private TextView status;
     private volatile boolean busy;
+    private volatile boolean ipswMissing;
     private volatile String ipswState = "", rootState = "", dbState = "";
 
     @Override
@@ -87,9 +90,20 @@ public class StartActivity extends Activity {
         ipswState = "Firmware: looking for an IPSW...";
         show();
         new Thread(new Runnable() { public void run() {
-            File ipsw = IpswSetup.find(Storage.root());
+            /* the sdcard can take a few seconds to mount after boot: retry */
+            File ipsw = null;
+            for (int i = 0; i < 20 && ipsw == null; i++) {
+                ipsw = IpswSetup.find(Storage.root());
+                if (ipsw == null) {
+                    try { Thread.sleep(500); } catch (InterruptedException e) { break; }
+                }
+            }
             File stamp = new File(getFilesDir(), "ipsw.stamp");
-            if (ipsw == null) {
+            ipswMissing = ipsw == null && !firmwareReady();
+            if (ipsw == null && firmwareReady()) {
+                /* the firmware is already extracted: the IPSW is not needed anymore */
+                ipswState = "Firmware: ready";
+            } else if (ipswMissing) {
                 ipswState = "Firmware: no IPSW. Copy iPod_25.1.3.ipsw to " + Storage.root();
             } else if (IpswSetup.ready(ipsw, Storage.firmware(StartActivity.this), Storage.osos(StartActivity.this), stamp)) {
                 ipswState = "Firmware: " + ipsw.getName();
@@ -145,6 +159,31 @@ public class StartActivity extends Activity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         menu.select(START);
+    }
+
+    /* the sdcard can mount long after the app started: while the IPSW is
+       missing, check again every 2 s, so a late mount clears the message */
+    private final Handler handler = new Handler();
+    private final Runnable recheck = new Runnable() {
+        public void run() {
+            Log.d("retailos", "recheck: ipswMissing=" + ipswMissing + " busy=" + busy
+                    + " root=" + Storage.root());
+            if (ipswMissing && !busy) setup();
+            handler.postDelayed(this, 2000);
+        }
+    };
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        handler.removeCallbacks(recheck);
+        handler.postDelayed(recheck, 2000);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        handler.removeCallbacks(recheck);
     }
 
     /** true if this app is the default home screen */

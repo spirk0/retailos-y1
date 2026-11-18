@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="org.retailos"
+    android:versionCode="1"
+    android:versionName="0.1">
+
+    <uses-sdk android:minSdkVersion="17" android:targetSdkVersion="17" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <application
+        android:label="retailOS"
+        android:hasCode="true"
+        android:debuggable="true">
+        <!-- The start screen: "Build database", "Start retailOS". It has the
+             icon, and the user can select it as the home screen (HOME,
+             DEFAULT): the Y1 then starts into the retailOS. One task, which
+             HOME brings back (singleTask). HOME also ends the iPod above it
+             (it sleeps, see NativeActivity.onStop). -->
+        <activity
+            android:name=".StartActivity"
+            android:label="retailOS"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:screenOrientation="landscape"
+            android:launchMode="singleTask"
+            android:clearTaskOnLaunch="true"
+            android:stateNotNeeded="true"
+            android:configChanges="orientation|keyboardHidden|screenSize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <!-- The iPod: the native runner on the screen. Also:
+             adb shell am start -n org.retailos/.NativeActivity -->
+        <activity
+            android:name=".NativeActivity"
+            android:label="retailOS"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:screenOrientation="landscape"
+            android:configChanges="orientation|keyboardHidden|screenSize" />
+    </application>
+</manifest>

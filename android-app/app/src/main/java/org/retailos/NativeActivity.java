@@ -270,11 +270,28 @@ public class NativeActivity extends Activity implements SurfaceHolder.Callback {
      * and RGB565 pixels per frame. Each frame is drawn when it comes. The
      * log (tag retailos) gives the time from a key to the next frame, and
      * the frames per second. */
+    private volatile long lastFrameAt = SystemClock.uptimeMillis();
+
     private void frameLoop() {
         byte[] hdr = new byte[16], pix = null;
         Bitmap frame = null;
         long countFrom = SystemClock.uptimeMillis();
         int count = 0;
+        /* a resumed snapshot can leave the guest asleep: no frame, no key
+           reaction. Poke the wheel when the screen is frozen. */
+        Thread watchdog = new Thread(new Runnable() { public void run() {
+            while (!destroyed) {
+                try { Thread.sleep(2000); } catch (InterruptedException e) { return; }
+                long now = SystemClock.uptimeMillis();
+                if (running && now - lastFrameAt > 4000) {
+                    Log.w("retailos", "no frame for " + (now - lastFrameAt) + " ms, poking the wheel");
+                    send((byte) 'e');
+                    lastFrameAt = now;
+                }
+            }
+        }});
+        watchdog.setDaemon(true);
+        watchdog.start();
         while (!destroyed) {
             String path = fifo;
             if (path == null || !new File(path).exists()) {
@@ -305,6 +322,7 @@ public class NativeActivity extends Activity implements SurfaceHolder.Callback {
                         shown = frame;
                     }
                     fifoFrames = true;
+                    lastFrameAt = SystemClock.uptimeMillis();
                     if (!bufferSized) sizeBuffer(w, h);
                     if (running) drawBitmap(frame);
                     long now = SystemClock.uptimeMillis(), k = keyAt;

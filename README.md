@@ -16,7 +16,15 @@ the iPod's menus, album covers, hold switch (MENU+PLAY) and backlight.
   You should be able to find it with Google, Apple still hosts it.
 - The `rom.zip` from releases and [mtkclient](https://github.com/bkerler/mtkclient) to flash it
 
-## Installation
+## Installation in Updater CE
+
+1. Select Y1 as your model in the Select Software screen
+2. Select iPod OS (Dev) as your software
+3. Pick the latest release and click Install
+
+   This software is experimental and mostly intended for developer use in exploring running/porting of the iPod Video firmware on Innioasis Y1
+
+## Installation in MTKclient manually
 
 1. Install MTKClient: https://github.com/bkerler/mtkclient
 2. Download the latest firmware here: https://github.com/spirk0/retailos-y1/releases/latest 
